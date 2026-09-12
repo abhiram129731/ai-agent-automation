@@ -102,31 +102,9 @@ with st.sidebar:
         help="The agent will autonomously run discovery rounds until this threshold is reached."
     )
     
-    st.subheader("🔑 API & Discovery Settings")
-    env_gemini_key = os.environ.get("GEMINI_API_KEY", "")
+    st.success("🟢 Autonomous Discovery Engine: ACTIVE\n(Self-healing multi-source discovery enabled)")
     
-    user_gemini_key = st.text_input(
-        "Gemini API Key (Optional)",
-        value=env_gemini_key,
-        type="password",
-        help="Leave blank to use preconfigured server key or autonomous web search engine."
-    )
-    
-    gemini_model = st.selectbox(
-        "Gemini Model",
-        ["gemini-3.1-flash-lite", "gemini-3.6-flash", "gemini-flash-latest", "gemini-2.5-flash"],
-        index=0,
-        help="Select model for LLM-assisted search grounding."
-    )
-    
-    if user_gemini_key:
-        os.environ["GEMINI_API_KEY"] = user_gemini_key
-    if gemini_model:
-        os.environ["GEMINI_MODEL"] = gemini_model
-
-    st.success("🟢 Autonomous Web Engine: ACTIVE\n(Self-healing multi-source discovery enabled)")
-    
-    with st.expander("📋 Target Profile & Rules", expanded=False):
+    with st.expander("📋 Target Profile & Rules", expanded=True):
         st.markdown("""
         **TVB Parameters**:
         - **Stage**: Revenue or funding between **$1M and $5M USD**.
@@ -161,7 +139,7 @@ if run_agent:
     try:
         leads = run_pipeline(
             min_leads=int(min_leads),
-            api_key=user_gemini_key or env_gemini_key,
+            api_key=os.environ.get("GEMINI_API_KEY", ""),
             log=app_logger
         )
         progress_bar.progress(100)
