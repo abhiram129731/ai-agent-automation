@@ -59,7 +59,7 @@ NON_US_HUBS = [
 ]
 
 
-def _fetch(url: str, timeout: int = 8) -> str | None:
+def _fetch(url: str, timeout: int = 5) -> str | None:
     try:
         resp = requests.get(url, headers=HEADERS, timeout=timeout, allow_redirects=True)
         if resp.status_code == 200 and "text" in resp.headers.get("Content-Type", ""):
@@ -72,23 +72,23 @@ def _fetch(url: str, timeout: int = 8) -> str | None:
 def extract_funding_amount(text: str) -> float | None:
     """
     Extracts a funding/revenue figure in millions USD, supporting
-    multiple currencies (€, £, USD, $, etc.).
+    multiple currencies (€, £, USD, $, etc.) and approximations (~, approx).
     """
     patterns = [
-        # $2.5 million / $3M / USD 2.5 million
-        (r"(?:\$|USD\s*)(\d+(?:\.\d+)?)\s*(?:million|m|mn)\b", 1.0),
+        # $2.5 million / $3M / USD 2.5 million / ~$2.5M
+        (r"(?:~|approx\.?|about)?\s*(?:\$|USD\s*)(\d+(?:\.\d+)?)\s*(?:million|m|mn)\b", 1.0),
         # €2 million / EUR 2M (convert ~1.08 to USD)
-        (r"(?:€|EUR\s*)(\d+(?:\.\d+)?)\s*(?:million|m|mn)\b", 1.08),
+        (r"(?:~|approx\.?|about)?\s*(?:€|EUR\s*)(\d+(?:\.\d+)?)\s*(?:million|m|mn)\b", 1.08),
         # £2 million / GBP 2M (convert ~1.28 to USD)
-        (r"(?:£|GBP\s*)(\d+(?:\.\d+)?)\s*(?:million|m|mn)\b", 1.28),
+        (r"(?:~|approx\.?|about)?\s*(?:£|GBP\s*)(\d+(?:\.\d+)?)\s*(?:million|m|mn)\b", 1.28),
         # 2.5 million USD / dollars
         (r"(\d+(?:\.\d+)?)\s*(?:million|m|mn)\s*(?:dollars|usd)\b", 1.0),
         # 2 million euros
         (r"(\d+(?:\.\d+)?)\s*(?:million|m|mn)\s*(?:euros|eur)\b", 1.08),
         # 2 million pounds
         (r"(\d+(?:\.\d+)?)\s*(?:million|m|mn)\s*(?:pounds|gbp)\b", 1.28),
-        # 'raised $2.5M' or 'seed round of $3M'
-        (r"(?:raised|secures|funding of|seed of)\s*\$?(\d+(?:\.\d+)?)\s*(?:million|m|mn)\b", 1.0),
+        # 'raised $2.5M' or 'raised ~$2.5 million' or 'seed round of 3M'
+        (r"(?:raised|secures|funding of|funding|seed of|seed round of|round of|securing)\s*(?:~|approx\.?|about)?\s*\$?\s*(\d+(?:\.\d+)?)\s*(?:million|m|mn)\b", 1.0),
         # Whole numbers like $2,500,000
         (r"\$\s*([1-9]\d{0,1}(?:,\d{3}){2})\b", 1e-6)
     ]

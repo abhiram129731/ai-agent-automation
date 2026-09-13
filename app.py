@@ -13,6 +13,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Sync st.secrets to os.environ if available (for Streamlit Community Cloud deployment)
+if hasattr(st, "secrets"):
+    try:
+        for _k in ["GEMINI_API_KEY", "GEMINI_MODEL", "HUNTER_API_KEY"]:
+            if _k in st.secrets and _k not in os.environ:
+                os.environ[_k] = str(st.secrets[_k])
+    except Exception:
+        pass
+
 from pipeline import run_pipeline, MIN_LEADS
 
 st.set_page_config(
@@ -102,6 +111,14 @@ with st.sidebar:
         help="The agent will autonomously run discovery rounds until this threshold is reached."
     )
     
+    default_key = os.environ.get("GEMINI_API_KEY", "")
+    user_api_key = st.text_input(
+        "Gemini API Key (optional override)",
+        value=default_key,
+        type="password",
+        help="Free key from aistudio.google.com/apikey. Leave pre-filled or override for testing."
+    )
+
     st.success("🟢 Autonomous Discovery Engine: ACTIVE\n(Self-healing multi-source discovery enabled)")
     
     with st.expander("📋 Target Profile & Rules", expanded=True):
@@ -137,9 +154,10 @@ if run_agent:
     progress_bar.progress(10)
 
     try:
+        active_key = user_api_key.strip() if user_api_key else os.environ.get("GEMINI_API_KEY", "")
         leads = run_pipeline(
             min_leads=int(min_leads),
-            api_key=os.environ.get("GEMINI_API_KEY", ""),
+            api_key=active_key,
             log=app_logger
         )
         progress_bar.progress(100)

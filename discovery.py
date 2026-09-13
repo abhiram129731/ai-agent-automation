@@ -21,6 +21,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
+warnings.filterwarnings("ignore", message=".*automatic function calling.*")
+warnings.filterwarnings("ignore", category=UserWarning)
 
 try:
     from google import genai
@@ -131,14 +133,14 @@ def _discover_via_gemini(client, model_name: str, n_prompts: int, log=print) -> 
         region = regions[i % len(regions)]
         sector = sectors[i % len(sectors)]
 
-        prompt = f"""Identify 4 to 6 real, currently operating tech startup companies matching ALL these parameters:
-1. Stage: Total funding raised or annual revenue is between $1 million and $5 million USD.
+        prompt = f"""Identify 4 to 6 real, currently operating tech startup companies strictly matching ALL these parameters:
+1. Stage: Total funding raised or annual revenue is STRICTLY between $1 million and $5 million USD (Seed, Angel, or Series Seed, e.g. $1.5M, $2.0M, $3.2M, $4.5M). STRICTLY FORBIDDEN: Never include companies that have raised more than $5 million USD (no $10M+, $20M+, or Series B+).
 2. Product: Operates a tech-related platform, software, or SaaS in {sector}.
 3. Location: Headquartered and founded strictly in {region} (outside the United States).
 4. Leadership: Include the actual real name of the CEO or Co-founder.
 
 For each company, output exactly one line in this format (no extra commentary, no numbers):
-COMPANY: <company name> | DOMAIN: <official website domain, e.g. company.com> | FOUNDER: <CEO or Co-founder full name> | NOTE: <raised $X million, headquarters location, one sentence summary>
+COMPANY: <company name> | DOMAIN: <official website domain, e.g. company.com> | FOUNDER: <CEO or Co-founder full name> | NOTE: raised $<X> million, headquarters in <city/country>, <one sentence summary>
 """
         log(f"[discovery:gemini] Query {i+1}/{n_prompts} across {region} ({sector.split()[0]})...")
 
@@ -171,9 +173,10 @@ COMPANY: <company name> | DOMAIN: <official website domain, e.g. company.com> | 
             cand = _parse_candidate_line(line)
             if cand and cand["domain"] not in seen:
                 if _domain_is_active(cand["domain"]):
+                    cand["region"] = region
                     seen.add(cand["domain"])
                     candidates.append(cand)
-                    log(f"[discovery:found] {cand['title']} ({cand['domain']})")
+                    log(f"[discovery:found] {cand['title']} ({cand['domain']}) - {region}")
 
         time.sleep(0.5)
 
@@ -222,6 +225,7 @@ def _discover_via_web(regions: list[str], max_items: int = 30, log=print) -> lis
                         candidates.append({
                             "domain": test_dom,
                             "title": company_name,
+                            "region": region,
                             "snippet": f"{title}. Region: {region}.",
                             "source_url": f"https://{test_dom}"
                         })
@@ -254,11 +258,11 @@ def discover_candidates(
                 seen.add(c["domain"])
                 candidates.append(c)
 
-    # Complement with autonomous web news discovery if pool is low
-    if len(candidates) < 20:
-        log("[discovery] Complementing with autonomous live web funding feeds...")
-        shuffled = random.sample(REGIONS, min(len(REGIONS), 10))
-        web_cands = _discover_via_web(shuffled, max_items=20, log=log)
+    # Fallback to autonomous web news discovery if Gemini is not configured or returned no results
+    if not candidates:
+        log("[discovery] Fallback: Activating autonomous live web funding feeds...")
+        shuffled = random.sample(REGIONS, min(len(REGIONS), 6))
+        web_cands = _discover_via_web(shuffled, max_items=15, log=log)
         for c in web_cands:
             if c["domain"] not in seen:
                 seen.add(c["domain"])
