@@ -101,27 +101,11 @@ st.markdown("""
 
 # Sidebar Configuration
 with st.sidebar:
-    st.header("⚙️ Agent Controls")
+    st.header("📋 TVB Investment Criteria")
     
-    min_leads = st.number_input(
-        "Target Qualifying Leads",
-        min_value=1,
-        max_value=50,
-        value=MIN_LEADS,
-        help="The agent will autonomously run discovery rounds until this threshold is reached."
-    )
-    
-    default_key = os.environ.get("GEMINI_API_KEY", "")
-    user_api_key = st.text_input(
-        "Gemini API Key (optional override)",
-        value=default_key,
-        type="password",
-        help="Free key from aistudio.google.com/apikey. Leave pre-filled or override for testing."
-    )
-
     st.success("🟢 Autonomous Discovery Engine: ACTIVE\n(Self-healing multi-source discovery enabled)")
     
-    with st.expander("📋 Target Profile & Rules", expanded=True):
+    with st.expander("📌 Target Parameters & Rules", expanded=True):
         st.markdown("""
         **TVB Parameters**:
         - **Stage**: Revenue or funding between **$1M and $5M USD**.
@@ -129,6 +113,7 @@ with st.sidebar:
         - **Geography**: Minimal to no US presence (headquartered outside the US).
         - **Executive Contact**: Name & email of CEO or Co-founder must be available.
         - **Data Integrity**: Unverified/untrue fields are left blank.
+        - **Minimum Bar**: ≥ 15 qualifying leads.
         """)
 
 # Main Action Area
@@ -154,10 +139,9 @@ if run_agent:
     progress_bar = progress_placeholder.progress(10)
 
     try:
-        active_key = user_api_key.strip() if user_api_key else os.environ.get("GEMINI_API_KEY", "")
         leads = run_pipeline(
-            min_leads=int(min_leads),
-            api_key=active_key,
+            min_leads=MIN_LEADS,
+            api_key=os.environ.get("GEMINI_API_KEY", ""),
             log=app_logger
         )
         progress_bar.progress(100)
