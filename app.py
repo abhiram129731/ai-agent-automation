@@ -137,7 +137,7 @@ with col1:
     run_agent = st.button("🚀 Run Lead Agent", type="primary", use_container_width=True)
 
 # Progress & Logs container
-progress_bar = st.progress(0)
+progress_placeholder = st.empty()
 status_placeholder = st.empty()
 log_placeholder = st.empty()
 results_placeholder = st.empty()
@@ -151,7 +151,7 @@ if run_agent:
         log_placeholder.code("\n".join(log_lines[-35:]), language="text")
 
     status_placeholder.info("⚡ Agent active: Initiating autonomous multi-source discovery...")
-    progress_bar.progress(10)
+    progress_bar = progress_placeholder.progress(10)
 
     try:
         active_key = user_api_key.strip() if user_api_key else os.environ.get("GEMINI_API_KEY", "")
